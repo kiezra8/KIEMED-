@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CliniFlow — Hospital Management System</title>
+  <meta name="description" content="CliniFlow: A full-featured, offline-first Hospital and Clinic Management System (PWA).">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d9488">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="CliniFlow">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css?v=2">
+
+  <!-- Print styles for invoices -->
+  <style>
+    @media print {
+      body > * { display: none !important; }
+      .modal-overlay, .modal-overlay * { display: block !important; }
+      .modal-overlay { position: static !important; background: none !important; }
+      .modal { box-shadow: none !important; max-width: 100% !important; }
+      .modal-header button, .modal-footer { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toast notifications -->
+  <div id="toast-container"></div>
+
+  <!-- App Root -->
+  <div id="app-root">
+    <div class="loader-wrap">
+      <div class="spinner"></div>
+      <p style="color:var(--text-muted);margin-top:0.5rem">Loading CliniFlow…</p>
+    </div>
+  </div>
+
+  <!-- Core JS -->
+  <script src="js/db.js?v=2"></script>
+  <script src="js/auth.js?v=2"></script>
+  <script src="js/sync.js?v=2"></script>
+  <script src="js/ui.js?v=2"></script>
+
+  <!-- Feature Modules -->
+  <script src="js/modules/dashboard.js?v=2"></script>
+  <script src="js/modules/patient.js?v=2"></script>
+  <script src="js/modules/triage.js?v=2"></script>
+  <script src="js/modules/consultation.js?v=2"></script>
+  <script src="js/modules/admissions.js?v=2"></script>
+  <script src="js/modules/pharmacy.js?v=2"></script>
+  <script src="js/modules/laboratory.js?v=2"></script>
+  <script src="js/modules/billing.js?v=2"></script>
+  <script src="js/modules/staff_appts_reports.js?v=2"></script>
+
+  <!-- Main App -->
+  <script src="js/app.js?v=2"></script>
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () =>
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => {
+            console.log('SW registered');
+            // Force checking for updates immediately on load
+            reg.update();
+          })
+          .catch(err => console.warn('SW failed:', err))
+      );
+    }
+  </script>
+</body>
+</html>
