@@ -265,7 +265,7 @@ export default function Consultations() {
                 const pastCount = allConsultations.filter(c => c.patient_id === p.id).length
                 return (
                   <option key={p.id} value={p.id}>
-                    {p.first_name} {p.last_name} ({p.gender}, DOB: {p.date_of_birth || 'N/A'}) &middot; {pastCount > 0 ? `${pastCount} Previous Visit${pastCount > 1 ? 's' : ''}` : 'New Patient'} {p.is_maternity ? '[Maternity]' : ''} {p.is_pediatric ? '[Child <5y]' : ''}
+                    {p.first_name} {p.last_name} ({p.gender}, Age: {p.age !== undefined && p.age !== null && p.age !== '' ? `${p.age} yrs` : p.date_of_birth ? `${new Date().getFullYear() - new Date(p.date_of_birth).getFullYear()} yrs` : 'N/A'}) &middot; {pastCount > 0 ? `${pastCount} Previous Visit${pastCount > 1 ? 's' : ''}` : 'New Patient'} {p.is_maternity ? '[Maternity]' : ''} {p.is_pediatric ? '[Child <5y]' : ''}
                   </option>
                 )
               })}

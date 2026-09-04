@@ -220,7 +220,7 @@ export default function Triage() {
                 <option value="">-- Choose Patient --</option>
                 {patients.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.first_name} {p.last_name} ({p.gender}, {p.date_of_birth || 'No DOB'}) {p.is_maternity ? '[Maternity]' : ''} {p.is_pediatric ? '[Pediatric]' : ''}
+                    {p.first_name} {p.last_name} ({p.gender}, Age: {p.age !== undefined && p.age !== null && p.age !== '' ? `${p.age} yrs` : p.date_of_birth ? `${new Date().getFullYear() - new Date(p.date_of_birth).getFullYear()} yrs` : 'N/A'}) {p.is_maternity ? '[Maternity]' : ''} {p.is_pediatric ? '[Pediatric]' : ''}
                   </option>
                 ))}
               </select>

@@ -53,6 +53,7 @@ export default function Patients() {
     first_name: '',
     last_name: '',
     gender: 'Female',
+    age: '',
     date_of_birth: '',
     phone: '',
     nin: '',
@@ -96,24 +97,22 @@ export default function Patients() {
     }
   }
 
-  const handleDobChange = (dob) => {
-    if (!dob) {
-      setFormData(prev => ({ ...prev, date_of_birth: dob, is_pediatric: false }))
+  const handleAgeChange = (ageVal) => {
+    if (ageVal === '' || ageVal === null || ageVal === undefined) {
+      setFormData(prev => ({ ...prev, age: '', date_of_birth: '', is_pediatric: false }))
       return
     }
-    const birthDate = new Date(dob)
-    const today = new Date()
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const m = today.getMonth() - birthDate.getMonth()
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
+    const numAge = parseInt(ageVal) || 0
+    const currentYear = new Date().getFullYear()
+    const birthYear = Math.max(1900, currentYear - numAge)
+    const dob = `${birthYear}-01-01`
 
-    const isChild = age < 5
-    const isWomanReproAge = formData.gender === 'Female' && age >= 12 && age <= 50
+    const isChild = numAge < 5
+    const isWomanReproAge = formData.gender === 'Female' && numAge >= 12 && numAge <= 50
 
     setFormData(prev => ({
       ...prev,
+      age: numAge,
       date_of_birth: dob,
       is_pediatric: isChild,
       is_maternity: isWomanReproAge ? prev.is_maternity : false,
@@ -140,6 +139,7 @@ export default function Patients() {
         first_name: '',
         last_name: '',
         gender: 'Female',
+        age: '',
         date_of_birth: '',
         phone: '',
         nin: '',
@@ -288,7 +288,7 @@ export default function Patients() {
 *COMPLETE PATIENT MEDICAL FILE & SUMMARY*
 =========================================
 *Patient Name:* ${fullName}
-*Gender / Age:* ${selectedPatient.gender}, DOB: ${selectedPatient.date_of_birth || 'N/A'}
+*Gender / Age:* ${selectedPatient.gender}, Age: ${selectedPatient.age !== undefined && selectedPatient.age !== null && selectedPatient.age !== '' ? `${selectedPatient.age} yrs` : selectedPatient.date_of_birth ? `${new Date().getFullYear() - new Date(selectedPatient.date_of_birth).getFullYear()} yrs` : 'N/A'}
 *District / Phone:* ${selectedPatient.district || 'Uganda'} &middot; ${selectedPatient.phone || 'N/A'}
 *Blood Group:* ${selectedPatient.blood_group || 'O+'}
 *Allergies:* ${selectedPatient.allergies || 'None Known'}
@@ -363,7 +363,7 @@ _Official Medical File generated via KIEMED Hospital Management System._`
             <div class="grid">
               <div><strong>Full Name:</strong> ${fullName}</div>
               <div><strong>Gender:</strong> ${selectedPatient.gender}</div>
-              <div><strong>Date of Birth:</strong> ${selectedPatient.date_of_birth || 'N/A'}</div>
+              <div><strong>Age:</strong> ${selectedPatient.age !== undefined && selectedPatient.age !== null && selectedPatient.age !== '' ? `${selectedPatient.age} yrs` : selectedPatient.date_of_birth ? `${new Date().getFullYear() - new Date(selectedPatient.date_of_birth).getFullYear()} yrs` : 'N/A'}</div>
               <div><strong>Blood Group:</strong> ${selectedPatient.blood_group || 'O+'}</div>
               <div><strong>Known Allergies:</strong> ${selectedPatient.allergies || 'None reported'}</div>
               <div><strong>Chronic Conditions:</strong> ${selectedPatient.chronic_conditions || 'None reported'}</div>
@@ -657,7 +657,7 @@ _Official Medical File generated via KIEMED Hospital Management System._`
                     {p.nin && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>NIN: {p.nin}</span>}
                   </td>
                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
-                    {p.gender} &middot; {p.date_of_birth ? `${new Date().getFullYear() - new Date(p.date_of_birth).getFullYear()} yrs` : 'Age N/A'}
+                    {p.gender} &middot; {p.age !== undefined && p.age !== null && p.age !== '' ? `${p.age} yrs` : p.date_of_birth ? `${new Date().getFullYear() - new Date(p.date_of_birth).getFullYear()} yrs` : 'Age N/A'}
                   </td>
                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
                     <div>{p.phone || 'No phone'}</div>
@@ -731,7 +731,7 @@ _Official Medical File generated via KIEMED Hospital Management System._`
                   <span className="badge badge-outline">{selectedPatient.blood_group || 'O+'}</span>
                 </div>
                 <div style={{ fontSize: '0.813rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  {selectedPatient.gender} &middot; DOB: {selectedPatient.date_of_birth || 'N/A'} &middot; Phone: {selectedPatient.phone || 'N/A'} &middot; {selectedPatient.district}
+                  {selectedPatient.gender} &middot; Age: {selectedPatient.age !== undefined && selectedPatient.age !== null && selectedPatient.age !== '' ? `${selectedPatient.age} yrs` : selectedPatient.date_of_birth ? `${new Date().getFullYear() - new Date(selectedPatient.date_of_birth).getFullYear()} yrs` : 'N/A'} &middot; Phone: {selectedPatient.phone || 'N/A'} &middot; {selectedPatient.district}
                 </div>
               </div>
 
@@ -1374,12 +1374,16 @@ _Official Medical File generated via KIEMED Hospital Management System._`
               </div>
 
               <div>
-                <label className="label">Date of Birth</label>
+                <label className="label">Age (Years) *</label>
                 <input
-                  type="date"
+                  type="number"
+                  min="0"
+                  max="130"
                   className="input"
-                  value={formData.date_of_birth}
-                  onChange={(e) => handleDobChange(e.target.value)}
+                  placeholder="e.g. 25"
+                  value={formData.age !== undefined && formData.age !== '' ? formData.age : ''}
+                  onChange={(e) => handleAgeChange(e.target.value)}
+                  required
                 />
               </div>
 
