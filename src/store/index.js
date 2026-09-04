@@ -90,13 +90,18 @@ export const useClinicStore = create(
       loadClinics: async () => {
         let clinics = await localGetAll('clinics')
 
-        // If local IndexedDB is empty, check Supabase clinics if connected
-        if ((!clinics || clinics.length === 0) && navigator.onLine) {
+        // Always check Supabase for clinics when online so any device signing in sees all existing clinics
+        if (navigator.onLine) {
           try {
-            const { data } = await supabase.from('clinics').select('*')
+            const { data } = await supabase.from('clinics').select('*').order('created_at', { ascending: true })
             if (data && data.length > 0) {
               for (const c of data) {
-                await localDB.clinics.put({ ...c, syncStatus: 'synced' })
+                const existing = await localDB.clinics.where('id').equals(c.id).first()
+                if (existing) {
+                  await localDB.clinics.where('id').equals(c.id).modify({ ...c, syncStatus: 'synced' })
+                } else {
+                  await localDB.clinics.add({ ...c, syncStatus: 'synced' })
+                }
               }
               clinics = await localGetAll('clinics')
             }
@@ -105,8 +110,12 @@ export const useClinicStore = create(
           }
         }
 
-        const currentId = get().currentClinicId
-        const active = (clinics || []).find(c => c.id === currentId) || clinics?.[0] || null
+        const storedId = get().currentClinicId
+        // Prioritize: stored clinic, or primary clinic with data, or first available clinic
+        let active = (clinics || []).find(c => c.id === storedId)
+        if (!active && clinics && clinics.length > 0) {
+          active = clinics.find(c => c.id === 'df1dc645-616f-4743-ac4d-f8814c708181') || clinics[0]
+        }
 
         set({
           clinics: clinics || [],
@@ -114,6 +123,14 @@ export const useClinicStore = create(
           currentClinic: active,
           isLoaded: true,
         })
+
+        // Automatically initiate sync so all patients and medical files are pulled on this device immediately!
+        if (active?.id && navigator.onLine) {
+          useSyncStore.getState().sync(active.id).then(() => {
+            useSyncStore.getState().startListening(active.id)
+          })
+        }
+
         return clinics
       },
 

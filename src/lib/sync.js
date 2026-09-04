@@ -42,28 +42,47 @@ export async function flushPending(onProgress) {
 
 // ── Pull all records from Supabase into local ─────────────────
 export async function pullFromSupabase(clinicId) {
+  let anyChanged = false
   for (const table of SYNC_TABLES) {
     try {
       let query = supabase.from(table).select('*')
-      if (table !== 'clinics' && clinicId) query = query.eq('clinic_id', clinicId)
+      if (clinicId && table !== 'clinics' && table !== 'clinic_settings') {
+        query = query.eq('clinic_id', clinicId)
+      }
 
       const { data, error } = await query
       if (error) throw error
-      if (!data) continue
+      if (!data || data.length === 0) continue
 
+      let tableChanged = false
       for (const record of data) {
         const existing = await localDB[table].where('id').equals(record.id).first()
         if (existing) {
           if (existing.syncStatus !== 'pending') {
             await localDB[table].where('id').equals(record.id).modify({ ...record, syncStatus: 'synced' })
+            tableChanged = true
           }
         } else {
           await localDB[table].add({ ...record, syncStatus: 'synced' })
+          tableChanged = true
         }
+      }
+
+      if (tableChanged) {
+        anyChanged = true
+        window.dispatchEvent(new CustomEvent('kiemed-data-change', {
+          detail: { table, action: 'pull' }
+        }))
       }
     } catch (err) {
       console.warn(`[sync] Pull failed for ${table}:`, err.message)
     }
+  }
+
+  if (anyChanged) {
+    window.dispatchEvent(new CustomEvent('kiemed-data-change', {
+      detail: { table: 'all', action: 'pull' }
+    }))
   }
 }
 
@@ -71,35 +90,49 @@ export async function pullFromSupabase(clinicId) {
 export function startRealtime(clinicId, onUpdate) {
   stopRealtime()
 
-  const tables = ['patients', 'vitals', 'consultations', 'admissions',
-    'inventory', 'lab_requests', 'invoices', 'appointments', 'dispensing', 'patient_documents']
+  const tables = [
+    'clinics', 'clinic_settings', 'patients', 'vitals', 'consultations',
+    'admissions', 'beds', 'inventory', 'lab_requests', 'invoices',
+    'appointments', 'dispensing', 'patient_documents'
+  ]
 
   tables.forEach(table => {
+    const channelName = `realtime:${table}:${clinicId || 'global'}`
+    const filter = (clinicId && table !== 'clinics' && table !== 'clinic_settings')
+      ? `clinic_id=eq.${clinicId}`
+      : undefined
+
     const channel = supabase
-      .channel(`realtime:${table}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table,
-        filter: clinicId ? `clinic_id=eq.${clinicId}` : undefined,
+        filter,
       }, async (payload) => {
         const record = payload.new || payload.old
         if (!record?.id) return
 
-        if (payload.eventType === 'DELETE') {
-          await localDB[table].where('id').equals(record.id).delete()
-        } else {
-          const existing = await localDB[table].where('id').equals(record.id).first()
-          if (existing) {
-            if (existing.syncStatus !== 'pending') {
-              await localDB[table].where('id').equals(record.id).modify({ ...record, syncStatus: 'synced' })
-            }
+        try {
+          if (payload.eventType === 'DELETE') {
+            await localDB[table].where('id').equals(record.id).delete()
           } else {
-            await localDB[table].add({ ...record, syncStatus: 'synced' })
+            const existing = await localDB[table].where('id').equals(record.id).first()
+            if (existing) {
+              if (existing.syncStatus !== 'pending') {
+                await localDB[table].where('id').equals(record.id).modify({ ...record, syncStatus: 'synced' })
+              }
+            } else {
+              await localDB[table].add({ ...record, syncStatus: 'synced' })
+            }
           }
+          window.dispatchEvent(new CustomEvent('kiemed-data-change', {
+            detail: { table, action: payload.eventType, source: 'realtime', record }
+          }))
+          if (onUpdate) onUpdate(table, payload.eventType)
+        } catch (err) {
+          console.warn(`[realtime] Error handling ${table}:`, err)
         }
-        window.dispatchEvent(new CustomEvent('kiemed-data-change', { detail: { table, action: payload.eventType, source: 'realtime' } }))
-        if (onUpdate) onUpdate(table, payload.eventType)
       })
       .subscribe()
 
