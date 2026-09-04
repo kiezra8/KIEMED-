@@ -67,7 +67,13 @@ export async function localDelete(table, id) {
   await localDB[table].where('id').equals(id).delete()
   window.dispatchEvent(new CustomEvent('kiemed-data-change', { detail: { table, action: 'delete', id } }))
   if (navigator.onLine) {
-    import('./sync').then(s => s.flushPending().catch(() => {}))
+    import('./supabase').then(async ({ supabase }) => {
+      try {
+        await supabase.from(table).delete().eq('id', id)
+      } catch (err) {
+        console.warn(`[db] Remote delete failed for ${table}/${id}:`, err)
+      }
+    }).catch(() => {})
   }
 }
 

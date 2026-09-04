@@ -70,14 +70,18 @@ export default function Patients() {
   useEffect(() => {
     loadPatients()
     const handleDataChange = (e) => {
-      if (['patients', 'patient_documents'].includes(e.detail?.table)) {
+      const tbl = e.detail?.table
+      if (!tbl || tbl === 'all' || [
+        'patients', 'vitals', 'consultations', 'lab_requests',
+        'invoices', 'dispensing', 'admissions', 'patient_documents'
+      ].includes(tbl)) {
         loadPatients()
         if (selectedPatient) openPatientChart(selectedPatient)
       }
     }
     window.addEventListener('kiemed-data-change', handleDataChange)
     return () => window.removeEventListener('kiemed-data-change', handleDataChange)
-  }, [currentClinic?.id])
+  }, [currentClinic?.id, selectedPatient?.id])
 
   const loadPatients = async () => {
     if (!currentClinic?.id) return

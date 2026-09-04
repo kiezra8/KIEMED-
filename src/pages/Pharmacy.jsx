@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import {
   Pill, Plus, Search, AlertTriangle, CheckCircle2,
   Clock, PackageCheck, ShoppingCart, RefreshCw, Layers,
-  ShoppingBag, DollarSign, User, Phone, Tag, Filter, Sparkles
+  ShoppingBag, DollarSign, User, Phone, Tag, Filter, Sparkles,
+  Edit3, Trash2
 } from 'lucide-react'
 import { useClinicStore, useToastStore } from '../store'
-import { localGetAll, localAdd, localPut } from '../lib/db'
+import { localGetAll, localAdd, localPut, localDelete } from '../lib/db'
 import Modal from '../components/ui/Modal'
 
 // Comprehensive Uganda Ministry of Health (MOH) & UNMSHOP Drug Classes
@@ -73,6 +74,15 @@ export default function Pharmacy() {
   })
   const [customCategory, setCustomCategory] = useState('')
 
+  // Edit Medicine State
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editingDrug, setEditingDrug] = useState(null)
+  const [editCustomCategory, setEditCustomCategory] = useState('')
+
+  // Delete Medicine State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deletingDrug, setDeletingDrug] = useState(null)
+
   useEffect(() => {
     loadData()
     const handleDataChange = (e) => {
@@ -133,6 +143,72 @@ export default function Pharmacy() {
       loadData()
     } catch (err) {
       toast('Failed to add medicine: ' + err.message, 'error')
+    }
+  }
+
+  // Open Edit Medicine Modal
+  const handleOpenEdit = (drug) => {
+    const isCustomCat = !DRUG_CATEGORIES.includes(drug.category) || drug.category === 'Others'
+    setEditingDrug({
+      ...drug,
+      category: isCustomCat ? 'Others' : drug.category,
+      current_stock: String(drug.current_stock ?? ''),
+      reorder_level: String(drug.reorder_level ?? '10'),
+      unit_price: String(drug.unit_price ?? ''),
+    })
+    setEditCustomCategory(isCustomCat ? drug.category : '')
+    setEditModalOpen(true)
+  }
+
+  // Save Edited Medicine
+  const handleSaveEdit = async (e) => {
+    e.preventDefault()
+    if (!editingDrug || !editingDrug.name.trim()) {
+      toast('Please enter medicine name', 'warning')
+      return
+    }
+
+    const finalCategory = editingDrug.category === 'Others'
+      ? (editCustomCategory.trim() || 'Others')
+      : editingDrug.category
+
+    try {
+      const updated = {
+        ...editingDrug,
+        name: editingDrug.name.trim(),
+        category: finalCategory,
+        current_stock: parseInt(editingDrug.current_stock) || 0,
+        reorder_level: parseInt(editingDrug.reorder_level) || 10,
+        unit_price: parseFloat(editingDrug.unit_price) || 0,
+      }
+
+      await localPut('inventory', updated)
+      toast(`Updated ${updated.name} successfully`, 'success')
+      setEditModalOpen(false)
+      setEditingDrug(null)
+      loadData()
+    } catch (err) {
+      toast('Failed to update medicine: ' + err.message, 'error')
+    }
+  }
+
+  // Open Delete Confirmation Modal
+  const handleOpenDelete = (drug) => {
+    setDeletingDrug(drug)
+    setDeleteModalOpen(true)
+  }
+
+  // Confirm Delete Medicine
+  const handleConfirmDelete = async () => {
+    if (!deletingDrug) return
+    try {
+      await localDelete('inventory', deletingDrug.id)
+      toast(`Deleted "${deletingDrug.name}" from pharmacy stock`, 'success')
+      setDeleteModalOpen(false)
+      setDeletingDrug(null)
+      loadData()
+    } catch (err) {
+      toast('Failed to delete medicine: ' + err.message, 'error')
     }
   }
 
@@ -522,18 +598,51 @@ export default function Pharmacy() {
                           )}
                         </td>
                         <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                          <button
-                            onClick={() => {
-                              setOtcForm(prev => ({ ...prev, drug_id: item.id }))
-                              setOtcModalOpen(true)
-                            }}
-                            className="btn btn-secondary btn-sm"
-                            disabled={item.current_stock <= 0}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                          >
-                            <ShoppingBag size={13} />
-                            <span>Sell OTC</span>
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={() => {
+                                setOtcForm(prev => ({ ...prev, drug_id: item.id }))
+                                setOtcModalOpen(true)
+                              }}
+                              className="btn btn-secondary btn-sm"
+                              disabled={item.current_stock <= 0}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '4px 8px', fontSize: '0.75rem' }}
+                              title="Sell OTC"
+                            >
+                              <ShoppingBag size={12} />
+                              <span>Sell OTC</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleOpenEdit(item)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '4px 8px', fontSize: '0.75rem' }}
+                              title="Edit drug details & stock"
+                            >
+                              <Edit3 size={12} />
+                              <span>Edit</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleOpenDelete(item)}
+                              className="btn btn-sm"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                padding: '4px 8px',
+                                fontSize: '0.75rem',
+                                background: 'rgba(239, 68, 68, 0.12)',
+                                color: 'var(--danger, #ef4444)',
+                                border: '1px solid rgba(239, 68, 68, 0.25)',
+                                cursor: 'pointer'
+                              }}
+                              title="Delete drug from catalog"
+                            >
+                              <Trash2 size={12} />
+                              <span>Delete</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -907,6 +1016,181 @@ export default function Pharmacy() {
               <button type="submit" className="btn btn-primary">Save to Stock</button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Edit Medicine Modal */}
+      {editModalOpen && editingDrug && (
+        <Modal title={`Edit Medicine: ${editingDrug.name}`} onClose={() => { setEditModalOpen(false); setEditingDrug(null) }}>
+          <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '75vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
+            <div>
+              <label className="label">Medicine / Drug Name *</label>
+              <input
+                type="text"
+                className="input"
+                required
+                value={editingDrug.name}
+                onChange={(e) => setEditingDrug({ ...editingDrug, name: e.target.value })}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div>
+                <label className="label">Category / Drug Class *</label>
+                <select
+                  className="input"
+                  value={editingDrug.category}
+                  onChange={(e) => setEditingDrug({ ...editingDrug, category: e.target.value })}
+                >
+                  {DRUG_CATEGORIES.filter(c => c !== 'All Categories').map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="label">Unit / Packaging</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={editingDrug.unit || 'Tablets'}
+                  onChange={(e) => setEditingDrug({ ...editingDrug, unit: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Custom Category input if Others */}
+            {editingDrug.category === 'Others' && (
+              <div style={{
+                background: 'rgba(13, 148, 136, 0.08)',
+                padding: '0.85rem',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px dashed var(--brand)'
+              }}>
+                <label className="label" style={{ color: 'var(--brand)', fontWeight: 700 }}>
+                  Custom Category Name *
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  required
+                  placeholder="e.g. Antidotes, Dental, Infusions"
+                  value={editCustomCategory}
+                  onChange={(e) => setEditCustomCategory(e.target.value)}
+                  style={{ background: 'var(--surface-1)' }}
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+              <div>
+                <label className="label">Current Stock Quantity *</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="input"
+                  required
+                  value={editingDrug.current_stock}
+                  onChange={(e) => setEditingDrug({ ...editingDrug, current_stock: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="label">Reorder Alert Level</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="input"
+                  value={editingDrug.reorder_level}
+                  onChange={(e) => setEditingDrug({ ...editingDrug, reorder_level: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="label">Unit Price (UGX) *</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="input"
+                  required
+                  value={editingDrug.unit_price}
+                  onChange={(e) => setEditingDrug({ ...editingDrug, unit_price: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+              <div>
+                <label className="label">Expiry Date</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={editingDrug.expiry_date || ''}
+                  onChange={(e) => setEditingDrug({ ...editingDrug, expiry_date: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="label">Supplier / Source</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={editingDrug.supplier || ''}
+                  onChange={(e) => setEditingDrug({ ...editingDrug, supplier: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => { setEditModalOpen(false); setEditingDrug(null) }}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && deletingDrug && (
+        <Modal title={`Delete Medicine: ${deletingDrug.name}`} onClose={() => { setDeleteModalOpen(false); setDeletingDrug(null) }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--danger)' }}>
+              <AlertTriangle size={24} />
+              <div style={{ fontWeight: 700, fontSize: '1rem' }}>
+                Are you sure you want to delete this medicine?
+              </div>
+            </div>
+
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              You are about to permanently remove <strong>"{deletingDrug.name}"</strong> ({deletingDrug.category}, Current Stock: {deletingDrug.current_stock} {deletingDrug.unit}) from your pharmacy inventory and cloud records across all devices.
+            </p>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '0.75rem',
+              marginTop: '0.5rem'
+            }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => { setDeleteModalOpen(false); setDeletingDrug(null) }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="btn btn-danger"
+                style={{ background: 'var(--danger, #ef4444)', color: '#fff' }}
+              >
+                Delete Medicine
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
