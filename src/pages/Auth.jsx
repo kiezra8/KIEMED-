@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Mail, Lock, LogIn, UserPlus, ShieldCheck, Hospital, Globe } from 'lucide-react'
+import { Mail, Lock, LogIn, UserPlus, Hospital, Globe } from 'lucide-react'
 import { useAuthStore, useToastStore } from '../store'
 
 export default function Auth({ onAuthenticated }) {
@@ -42,13 +42,6 @@ export default function Auth({ onAuthenticated }) {
     } finally {
       setLoading(false)
     }
-  }
-
-  // Resilient offline/local access option
-  const handleOfflineBypass = () => {
-    setUser({ id: 'local-staff', email: 'admin@kiemed.local', role: 'hospital_admin' }, null)
-    toast('Accessing in Local Offline Hospital Mode', 'info')
-    if (onAuthenticated) onAuthenticated()
   }
 
   return (
@@ -212,27 +205,6 @@ export default function Auth({ onAuthenticated }) {
             )}
           </button>
         </form>
-
-        {/* Offline fallback mode */}
-        <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
-          <button
-            type="button"
-            onClick={handleOfflineBypass}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              textDecoration: 'underline'
-            }}
-          >
-            <ShieldCheck size={14} /> Work Offline / Local Clinic Mode
-          </button>
-        </div>
       </div>
     </div>
   )

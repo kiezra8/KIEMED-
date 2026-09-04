@@ -46,10 +46,11 @@ export default function App() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-1)' }}>
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🏥</div>
-          <div>Loading KIEMED...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0f1e', color: '#f1f5f9' }}>
+        <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🏥</div>
+          <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#f1f5f9' }}>KIEMED</div>
+          <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>Loading Hospital System...</div>
         </div>
       </div>
     )

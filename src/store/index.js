@@ -10,32 +10,45 @@ export const useAuthStore = create(
     (set, get) => ({
       user: null,
       session: null,
-      loading: true,
+      loading: false,
 
       setUser: (user, session) => set({ user, session, loading: false }),
       setLoading: (loading) => set({ loading }),
 
       initAuth: async () => {
         try {
-          const { data: { session } } = await supabase.auth.getSession()
-          if (session) {
+          // Safety timeout so getSession never hangs indefinitely
+          const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 1500))
+          const sessionPromise = supabase.auth.getSession().then(({ data }) => data?.session).catch(() => null)
+          const session = await Promise.race([sessionPromise, timeoutPromise])
+
+          if (session?.user) {
             set({ user: session.user, session, loading: false })
           } else {
             const cachedUser = get().user
-            set({ user: cachedUser || null, loading: false })
+            // Strictly require a valid registered user account
+            if (cachedUser?.email && cachedUser.email !== 'admin@kiemed.local') {
+              set({ user: cachedUser, loading: false })
+            } else {
+              set({ user: null, session: null, loading: false })
+            }
           }
         } catch (e) {
           console.warn('[auth] Init error:', e)
           set({ loading: false })
         }
 
-        supabase.auth.onAuthStateChange((_event, session) => {
-          if (session?.user) {
-            set({ user: session.user, session, loading: false })
-          } else if (_event === 'SIGNED_OUT') {
-            set({ user: null, session: null, loading: false })
-          }
-        })
+        try {
+          supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+              set({ user: session.user, session, loading: false })
+            } else if (_event === 'SIGNED_OUT') {
+              set({ user: null, session: null, loading: false })
+            }
+          })
+        } catch (e) {
+          console.warn('[auth] Auth state change listener error:', e)
+        }
       },
 
       signIn: async (email, password) => {
