@@ -19,7 +19,7 @@ import Toast from './components/ui/Toast'
 import { useClinicStore, useSyncStore, useAuthStore } from './store'
 
 export default function App() {
-  const { clinics, loadClinics, currentClinicId } = useClinicStore()
+  const { clinics, loadClinics, currentClinicId, isLoaded } = useClinicStore()
   const { setOnline, sync, startListening } = useSyncStore()
   const { user, loading, initAuth } = useAuthStore()
 
@@ -66,7 +66,20 @@ export default function App() {
     )
   }
 
-  // Show setup wizard if no clinics yet
+  // If clinics are still loading initially, show a brief opening screen instead of flashing SetupWizard
+  if (!isLoaded && clinics.length === 0) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0f1e', color: '#f1f5f9' }}>
+        <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🏥</div>
+          <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#f1f5f9' }}>KIEMED</div>
+          <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>Opening your hospital account...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show setup wizard ONLY if truly no clinics exist after loading
   if (clinics.length === 0) {
     return (
       <>

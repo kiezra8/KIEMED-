@@ -72,7 +72,7 @@ export const useAuthStore = create(
         set({ user: null, session: null, loading: false })
       },
     }),
-    { name: 'kiemed-auth', partialize: s => ({ user: s.user }) }
+    { name: 'kiemed-auth', partialize: s => ({ user: s.user, session: s.session }) }
   )
 )
 
@@ -83,15 +83,37 @@ export const useClinicStore = create(
       currentClinicId: null,
       currentClinic: null,
       clinics: [],
+      isLoaded: false,
 
-      setCurrentClinic: (clinic) => set({ currentClinicId: clinic.id, currentClinic: clinic }),
+      setCurrentClinic: (clinic) => set({ currentClinicId: clinic?.id, currentClinic: clinic }),
 
       loadClinics: async () => {
-        const clinics = await localGetAll('clinics')
-        set({ clinics })
-        if (clinics.length > 0 && !get().currentClinicId) {
-          set({ currentClinicId: clinics[0].id, currentClinic: clinics[0] })
+        let clinics = await localGetAll('clinics')
+
+        // If local IndexedDB is empty, check Supabase clinics if connected
+        if ((!clinics || clinics.length === 0) && navigator.onLine) {
+          try {
+            const { data } = await supabase.from('clinics').select('*')
+            if (data && data.length > 0) {
+              for (const c of data) {
+                await localDB.clinics.put({ ...c, syncStatus: 'synced' })
+              }
+              clinics = await localGetAll('clinics')
+            }
+          } catch (e) {
+            console.warn('[clinic] Remote clinic check error:', e)
+          }
         }
+
+        const currentId = get().currentClinicId
+        const active = (clinics || []).find(c => c.id === currentId) || clinics?.[0] || null
+
+        set({
+          clinics: clinics || [],
+          currentClinicId: active?.id || null,
+          currentClinic: active,
+          isLoaded: true,
+        })
         return clinics
       },
 
@@ -105,11 +127,18 @@ export const useClinicStore = create(
           theme: 'dark',
           currency: 'UGX',
         })
-        set(s => ({ clinics: [...s.clinics, clinic], currentClinicId: clinic.id, currentClinic: clinic }))
+        set(s => ({ clinics: [...s.clinics, clinic], currentClinicId: clinic.id, currentClinic: clinic, isLoaded: true }))
         return clinic
       },
     }),
-    { name: 'kiemed-clinic', partialize: s => ({ currentClinicId: s.currentClinicId }) }
+    {
+      name: 'kiemed-clinic',
+      partialize: s => ({
+        currentClinicId: s.currentClinicId,
+        currentClinic: s.currentClinic,
+        clinics: s.clinics,
+      })
+    }
   )
 )
 
