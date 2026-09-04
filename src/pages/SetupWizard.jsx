@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Building2, MapPin, Phone, ArrowRight, Lock, Shield, BedDouble } from 'lucide-react'
-import { useClinicStore, usePinStore, useToastStore } from '../store'
+import { useClinicStore, usePinStore, useToastStore, useAuthStore } from '../store'
 
 export default function SetupWizard() {
   const [step, setStep] = useState(1)
@@ -13,6 +13,7 @@ export default function SetupWizard() {
   const { createClinic } = useClinicStore()
   const { savePIN, clearPIN } = usePinStore()
   const { add: toast } = useToastStore()
+  const { user } = useAuthStore()
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -26,6 +27,7 @@ export default function SetupWizard() {
     try {
       await createClinic({
         ...form,
+        admin_email: user?.email ? user.email.toLowerCase().trim() : null,
         bed_capacity: parseInt(form.bed_capacity) || 20,
       })
       if (pinSetup === 'setup') await savePIN(pin)

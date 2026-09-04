@@ -69,6 +69,25 @@ export const useAuthStore = create(
         try {
           await supabase.auth.signOut()
         } catch (e) {}
+        stopRealtime()
+        useClinicStore.getState().reset()
+        try {
+          localStorage.removeItem('kiemed-clinic')
+          localStorage.removeItem('kiemed-auth')
+        } catch (e) {}
+        try {
+          const tablesToClear = [
+            'patients', 'vitals', 'consultations', 'admissions', 'beds',
+            'inventory', 'dispensing', 'lab_requests', 'invoices',
+            'staff', 'appointments', 'patient_documents', 'clinics',
+            'clinic_settings', 'pending_ops'
+          ]
+          for (const tbl of tablesToClear) {
+            if (localDB[tbl]) await localDB[tbl].clear()
+          }
+        } catch (e) {
+          console.warn('[auth] Error clearing localDB on logout:', e)
+        }
         set({ user: null, session: null, loading: false })
       },
     }),
@@ -85,16 +104,43 @@ export const useClinicStore = create(
       clinics: [],
       isLoaded: false,
 
-      setCurrentClinic: (clinic) => set({ currentClinicId: clinic?.id, currentClinic: clinic }),
+      setCurrentClinic: (clinic) => {
+        set({ currentClinicId: clinic?.id || null, currentClinic: clinic })
+        if (clinic?.id && navigator.onLine) {
+          useSyncStore.getState().sync(clinic.id).then(() => {
+            useSyncStore.getState().startListening(clinic.id)
+          })
+        }
+      },
 
-      loadClinics: async () => {
-        let clinics = await localGetAll('clinics')
+      reset: () => {
+        set({
+          clinics: [],
+          currentClinicId: null,
+          currentClinic: null,
+          isLoaded: false,
+        })
+      },
 
-        // Always check Supabase for clinics when online so any device signing in sees all existing clinics
+      loadClinics: async (overrideEmail) => {
+        const user = useAuthStore.getState().user
+        const userEmail = (overrideEmail || user?.email)?.toLowerCase()?.trim()
+
+        if (!userEmail) {
+          set({ clinics: [], currentClinicId: null, currentClinic: null, isLoaded: true })
+          return []
+        }
+
+        // If online, fetch ONLY clinics belonging to this user account (admin_email)
         if (navigator.onLine) {
           try {
-            const { data } = await supabase.from('clinics').select('*').order('created_at', { ascending: true })
-            if (data && data.length > 0) {
+            const { data, error } = await supabase
+              .from('clinics')
+              .select('*')
+              .ilike('admin_email', userEmail)
+              .order('created_at', { ascending: true })
+
+            if (!error && data) {
               for (const c of data) {
                 const existing = await localDB.clinics.where('id').equals(c.id).first()
                 if (existing) {
@@ -103,39 +149,48 @@ export const useClinicStore = create(
                   await localDB.clinics.add({ ...c, syncStatus: 'synced' })
                 }
               }
-              clinics = await localGetAll('clinics')
             }
           } catch (e) {
             console.warn('[clinic] Remote clinic check error:', e)
           }
         }
 
+        // Filter local clinics strictly by this user's email
+        const allLocal = await localGetAll('clinics')
+        const userClinics = (allLocal || []).filter(c => {
+          if (!c.admin_email) return false
+          return c.admin_email.toLowerCase().trim() === userEmail
+        })
+
         const storedId = get().currentClinicId
-        // Prioritize: stored clinic, or primary clinic with data, or first available clinic
-        let active = (clinics || []).find(c => c.id === storedId)
-        if (!active && clinics && clinics.length > 0) {
-          active = clinics.find(c => c.id === 'df1dc645-616f-4743-ac4d-f8814c708181') || clinics[0]
-        }
+        const active = userClinics.find(c => c.id === storedId) || userClinics[0] || null
 
         set({
-          clinics: clinics || [],
+          clinics: userClinics,
           currentClinicId: active?.id || null,
           currentClinic: active,
           isLoaded: true,
         })
 
-        // Automatically initiate sync so all patients and medical files are pulled on this device immediately!
+        // Automatically sync and listen to real-time updates ONLY for this active clinic
         if (active?.id && navigator.onLine) {
           useSyncStore.getState().sync(active.id).then(() => {
             useSyncStore.getState().startListening(active.id)
           })
         }
 
-        return clinics
+        return userClinics
       },
 
       createClinic: async (data) => {
-        const clinic = await localAdd('clinics', data)
+        const user = useAuthStore.getState().user
+        const userEmail = user?.email ? user.email.toLowerCase().trim() : null
+        const clinicData = {
+          ...data,
+          admin_email: data.admin_email || userEmail,
+        }
+
+        const clinic = await localAdd('clinics', clinicData)
         // Also create default settings
         await localAdd('clinic_settings', {
           clinic_id: clinic.id,
@@ -144,7 +199,34 @@ export const useClinicStore = create(
           theme: 'dark',
           currency: 'UGX',
         })
-        set(s => ({ clinics: [...s.clinics, clinic], currentClinicId: clinic.id, currentClinic: clinic, isLoaded: true }))
+
+        if (navigator.onLine) {
+          try {
+            const { localId, syncStatus, ...cleanClinic } = clinic
+            await supabase.from('clinics').upsert(cleanClinic, { onConflict: 'id' })
+            await supabase.from('clinic_settings').upsert({
+              clinic_id: clinic.id,
+              pin_hash: null,
+              show_finances: false,
+              theme: 'dark',
+              currency: 'UGX',
+            }, { onConflict: 'clinic_id' })
+          } catch (e) {
+            console.warn('[clinic] Direct supabase create error:', e)
+          }
+        }
+
+        set(s => ({
+          clinics: [...s.clinics.filter(c => c.id !== clinic.id), clinic],
+          currentClinicId: clinic.id,
+          currentClinic: clinic,
+          isLoaded: true
+        }))
+
+        if (navigator.onLine) {
+          useSyncStore.getState().startListening(clinic.id)
+        }
+
         return clinic
       },
     }),

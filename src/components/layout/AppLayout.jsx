@@ -4,9 +4,9 @@ import {
   LayoutDashboard, Users, Activity, Stethoscope, BedDouble,
   Pill, FlaskConical, Receipt, Badge, Calendar, BarChart3,
   Settings, ChevronRight, Menu, X, Wifi, WifiOff, RefreshCw,
-  Building2, Plus
+  Building2, Plus, LogOut
 } from 'lucide-react'
-import { useClinicStore, useSyncStore, useToastStore } from '../../store'
+import { useClinicStore, useSyncStore, useToastStore, useAuthStore } from '../../store'
 import Modal from '../ui/Modal'
 
 const NAV = [
@@ -30,13 +30,14 @@ export default function AppLayout({ children }) {
   const { currentClinic, clinics, setCurrentClinic, createClinic } = useClinicStore()
   const { isOnline, isSyncing, lastSyncAt, sync } = useSyncStore()
   const { add: toast } = useToastStore()
+  const { user, signOut } = useAuthStore()
   const navigate = useNavigate()
 
   const [newClinicName, setNewClinicName] = useState('')
   const [newClinicAddr, setNewClinicAddr] = useState('')
 
   const handleSync = () => {
-    if (!isOnline) { toast('You are offline. Data will sync when connected.', 'warning'); return }
+    if (!isOnline) return toast('Offline — changes saved locally', 'warning')
     sync(currentClinic?.id).then(() => toast('Sync complete!', 'success'))
   }
 
@@ -75,8 +76,8 @@ export default function AppLayout({ children }) {
           <ChevronRight size={12} color="var(--text-muted)" />
         </div>
 
+        {/* Navigation */}
         <nav className="sidebar-nav">
-          <div className="nav-section-label">Navigation</div>
           {NAV.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
@@ -91,12 +92,31 @@ export default function AppLayout({ children }) {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="user-avatar">AD</div>
-            <div>
-              <div className="user-name">{currentClinic?.name || 'KIEMED'}</div>
-              <div className="user-role">Administrator</div>
+          <div className="sidebar-user" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <div className="user-avatar" style={{ flexShrink: 0 }}>
+                {user?.email ? user.email.slice(0, 2).toUpperCase() : 'AD'}
+              </div>
+              <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                <div className="user-name" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  {currentClinic?.name || 'My Clinic'}
+                </div>
+                <div className="user-role" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: '0.72rem' }} title={user?.email}>
+                  {user?.email || 'Administrator'}
+                </div>
+              </div>
             </div>
+            <button
+              onClick={async () => {
+                await signOut()
+                toast('Signed out', 'info')
+              }}
+              title="Sign Out of Account"
+              className="btn-icon"
+              style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '6px' }}
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </aside>

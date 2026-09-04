@@ -25,8 +25,15 @@ export default function App() {
 
   useEffect(() => {
     initAuth()
-    loadClinics()
   }, [])
+
+  useEffect(() => {
+    if (user?.email) {
+      loadClinics(user.email)
+    } else {
+      useClinicStore.setState({ isLoaded: true })
+    }
+  }, [user?.email])
 
   useEffect(() => {
     const handleOnline  = () => { setOnline(true);  sync(currentClinicId) }
@@ -60,7 +67,10 @@ export default function App() {
   if (!user) {
     return (
       <>
-        <Auth onAuthenticated={() => loadClinics()} />
+        <Auth onAuthenticated={() => {
+          const u = useAuthStore.getState().user
+          if (u?.email) loadClinics(u.email)
+        }} />
         <Toast />
       </>
     )

@@ -42,11 +42,14 @@ export async function flushPending(onProgress) {
 
 // ── Pull all records from Supabase into local ─────────────────
 export async function pullFromSupabase(clinicId) {
+  if (!clinicId) return
   let anyChanged = false
   for (const table of SYNC_TABLES) {
     try {
       let query = supabase.from(table).select('*')
-      if (clinicId && table !== 'clinics' && table !== 'clinic_settings') {
+      if (table === 'clinics') {
+        query = query.eq('id', clinicId)
+      } else {
         query = query.eq('clinic_id', clinicId)
       }
 
@@ -89,18 +92,17 @@ export async function pullFromSupabase(clinicId) {
 // ── Real-time Supabase subscriptions ─────────────────────────
 export function startRealtime(clinicId, onUpdate) {
   stopRealtime()
+  if (!clinicId) return
 
   const tables = [
-    'clinics', 'clinic_settings', 'patients', 'vitals', 'consultations',
+    'clinic_settings', 'patients', 'vitals', 'consultations',
     'admissions', 'beds', 'inventory', 'lab_requests', 'invoices',
     'appointments', 'dispensing', 'patient_documents'
   ]
 
   tables.forEach(table => {
-    const channelName = `realtime:${table}:${clinicId || 'global'}`
-    const filter = (clinicId && table !== 'clinics' && table !== 'clinic_settings')
-      ? `clinic_id=eq.${clinicId}`
-      : undefined
+    const channelName = `realtime:${table}:${clinicId}`
+    const filter = `clinic_id=eq.${clinicId}`
 
     const channel = supabase
       .channel(channelName)
