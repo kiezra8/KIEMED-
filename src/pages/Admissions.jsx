@@ -99,6 +99,41 @@ export default function Admissions() {
       return
     }
 
+    if (!formData.bed_number) {
+      toast('Please select a bed number', 'warning')
+      return
+    }
+
+    // 1. PREVENT DUPLICATE ADMISSION ERROR: Check if patient is already admitted
+    const activeAdm = admissions.find(
+      a => a.patient_id === formData.patient_id && a.status === 'admitted'
+    )
+    if (activeAdm) {
+      toast(
+        `Admission Error: Patient is ALREADY admitted in ${activeAdm.ward} (${activeAdm.bed_number}). Discharging is required before a new admission!`,
+        'error'
+      )
+      return
+    }
+
+    // 2. PREVENT OCCUPIED BED CONFLICT: Check if bed is already taken
+    const activeBedOccupied = admissions.some(
+      a => a.ward === formData.ward && a.bed_number === formData.bed_number && a.status === 'admitted'
+    ) || beds.some(
+      b => b.ward === formData.ward && b.bed_number === formData.bed_number && b.status === 'occupied'
+    )
+
+    if (activeBedOccupied) {
+      const occupant = admissions.find(
+        a => a.ward === formData.ward && a.bed_number === formData.bed_number && a.status === 'admitted'
+      )
+      toast(
+        `Bed Error: Bed ${formData.bed_number} in ${formData.ward} has already been taken${occupant ? ` by ${occupant.patient_name}` : ''}! Please select an available bed.`,
+        'error'
+      )
+      return
+    }
+
     const patient = patients.find(p => p.id === formData.patient_id)
     try {
       // 1. Create admission record
@@ -162,7 +197,11 @@ export default function Admissions() {
   }
 
   const activeAdmissions = admissions.filter(a => a.status === 'admitted')
-  const occupiedBedCount = beds.filter(b => b.status === 'occupied').length
+  const isBedOccupied = (ward, bedNum) => {
+    return activeAdmissions.some(a => a.ward === ward && a.bed_number === bedNum) ||
+      beds.some(b => b.ward === ward && b.bed_number === bedNum && b.status === 'occupied')
+  }
+  const occupiedBedCount = beds.filter(b => isBedOccupied(b.ward, b.bed_number)).length
 
   const filteredBeds = selectedWard === 'All'
     ? beds
@@ -264,15 +303,17 @@ export default function Admissions() {
           gap: '1rem'
         }}>
           {filteredBeds.map(b => {
-            const isOcc = b.status === 'occupied'
+            const occAdm = activeAdmissions.find(a => a.ward === b.ward && a.bed_number === b.bed_number)
+            const isOcc = isBedOccupied(b.ward, b.bed_number)
+            const occupantName = b.patient_name || occAdm?.patient_name
             return (
               <div
                 key={b.id || b.bed_number}
                 style={{
                   padding: '1rem',
                   borderRadius: '8px',
-                  background: isOcc ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                  border: isOcc ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                  background: isOcc ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+                  border: isOcc ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(16, 185, 129, 0.3)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.4rem'
@@ -280,15 +321,34 @@ export default function Admissions() {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>{b.bed_number}</span>
-                  <span className={`badge ${isOcc ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
-                    {isOcc ? 'Occupied' : 'Available'}
+                  <span className={`badge ${isOcc ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.7rem', fontWeight: 700 }}>
+                    {isOcc ? 'TAKEN / OCCUPIED' : 'AVAILABLE'}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{b.ward}</div>
-                {isOcc && (
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.3rem' }}>
-                    {b.patient_name || 'Patient Admitted'}
+                {isOcc ? (
+                  <div style={{ marginTop: '0.3rem', padding: '0.4rem', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fca5a5' }}>
+                      {occupantName || 'Admitted Patient'}
+                    </div>
+                    {occAdm?.reason && (
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {occAdm.reason}
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, ward: b.ward, bed_number: b.bed_number }))
+                      setModalOpen(true)
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ marginTop: '0.4rem', fontSize: '0.75rem', padding: '4px 8px' }}
+                  >
+                    Admit to this Bed
+                  </button>
                 )}
               </div>
             )
@@ -301,13 +361,14 @@ export default function Admissions() {
         background: 'var(--card-bg, #1e293b)',
         borderRadius: '12px',
         border: '1px solid var(--border, #334155)',
-        overflow: 'hidden'
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>
           Currently Admitted Inpatients ({activeAdmissions.length})
         </div>
 
-        <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+        <table className="table" style={{ width: '100%', minWidth: '600px', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border)' }}>
               <th style={{ padding: '0.8rem 1rem' }}>Patient</th>
@@ -369,10 +430,18 @@ export default function Admissions() {
                 onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
               >
                 <option value="">-- Choose Patient --</option>
-                {patients.map(p => (
-                  <option key={p.id} value={p.id}>{p.first_name} {p.last_name} ({p.gender})</option>
-                ))}
+                {patients.map(p => {
+                  const alreadyAdm = activeAdmissions.find(a => a.patient_id === p.id)
+                  return (
+                    <option key={p.id} value={p.id} disabled={!!alreadyAdm}>
+                      {p.first_name} {p.last_name} ({p.gender}){alreadyAdm ? ` — [ALREADY ADMITTED in ${alreadyAdm.ward} (${alreadyAdm.bed_number})]` : ''}
+                    </option>
+                  )
+                })}
               </select>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
+                Note: Patients currently admitted cannot be admitted again until discharged.
+              </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
@@ -381,7 +450,16 @@ export default function Admissions() {
                 <select
                   className="input"
                   value={formData.ward}
-                  onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
+                  onChange={(e) => {
+                    const newWard = e.target.value
+                    const bedsInWard = beds.filter(b => b.ward === newWard)
+                    const firstAvail = bedsInWard.find(b => !isBedOccupied(newWard, b.bed_number))
+                    setFormData({
+                      ...formData,
+                      ward: newWard,
+                      bed_number: firstAvail?.bed_number || bedsInWard[0]?.bed_number || 'BED-01'
+                    })
+                  }}
                 >
                   {WARDS.map(w => (
                     <option key={w} value={w}>{w}</option>
@@ -390,13 +468,59 @@ export default function Admissions() {
               </div>
 
               <div>
-                <label className="label">Bed Number</label>
-                <input
-                  type="text"
+                <label className="label">Bed Number *</label>
+                <select
                   className="input"
+                  required
                   value={formData.bed_number}
                   onChange={(e) => setFormData({ ...formData, bed_number: e.target.value })}
-                />
+                >
+                  <option value="">-- Choose Bed in {formData.ward} --</option>
+                  {beds
+                    .filter(b => b.ward === formData.ward)
+                    .map(b => {
+                      const isTaken = isBedOccupied(b.ward, b.bed_number)
+                      const occAdm = activeAdmissions.find(a => a.ward === b.ward && a.bed_number === b.bed_number)
+                      const occName = b.patient_name || occAdm?.patient_name || 'Patient'
+                      return (
+                        <option key={b.id || b.bed_number} value={b.bed_number} disabled={isTaken}>
+                          {b.bed_number} — {isTaken ? `[TAKEN - Occupied by ${occName}]` : 'Available (Empty)'}
+                        </option>
+                      )
+                    })}
+                </select>
+              </div>
+            </div>
+
+            {/* Quick Bed Status Pill Visualizer for Selected Ward */}
+            <div>
+              <label className="label" style={{ fontSize: '0.75rem' }}>Beds in {formData.ward}:</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', maxHeight: '100px', overflowY: 'auto' }}>
+                {beds.filter(b => b.ward === formData.ward).map(b => {
+                  const isTaken = isBedOccupied(b.ward, b.bed_number)
+                  const isSelected = formData.bed_number === b.bed_number
+                  return (
+                    <button
+                      key={b.id || b.bed_number}
+                      type="button"
+                      disabled={isTaken}
+                      onClick={() => setFormData({ ...formData, bed_number: b.bed_number })}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        borderRadius: '6px',
+                        border: isSelected ? '2px solid var(--brand)' : '1px solid var(--border)',
+                        background: isTaken ? 'rgba(239, 68, 68, 0.15)' : isSelected ? 'rgba(16, 185, 129, 0.25)' : 'var(--surface-color)',
+                        color: isTaken ? '#fca5a5' : isSelected ? 'var(--brand)' : 'var(--text-primary)',
+                        cursor: isTaken ? 'not-allowed' : 'pointer',
+                        fontWeight: isSelected ? 700 : 500
+                      }}
+                      title={isTaken ? `Bed ${b.bed_number} is TAKEN` : `Click to select Bed ${b.bed_number}`}
+                    >
+                      {b.bed_number} {isTaken ? '(TAKEN)' : ''}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

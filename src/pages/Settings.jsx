@@ -10,13 +10,15 @@ import PinModal from '../components/ui/PinModal'
 import Modal from '../components/ui/Modal'
 
 export default function Settings() {
-  const { clinics, currentClinic, setCurrentClinic, createClinic } = useClinicStore()
+  const { clinics, currentClinic, setCurrentClinic, createClinic, deleteClinic } = useClinicStore()
   const { hasPIN, clearPIN } = usePinStore()
   const { isOnline, isSyncing, lastSyncAt, sync } = useSyncStore()
   const { add: toast } = useToastStore()
 
   const [pinModalOpen, setPinModalOpen] = useState(false)
   const [clinicModalOpen, setClinicModalOpen] = useState(false)
+  const [clinicToDelete, setClinicToDelete] = useState(null)
+  const [deletingClinic, setDeletingClinic] = useState(false)
   const [dbStats, setDbStats] = useState({
     patients: 0,
     vitals: 0,
@@ -76,6 +78,26 @@ export default function Settings() {
       setClinicForm({ name: '', address: '', phone: '', district: 'Kampala', bed_capacity: '20' })
     } catch (err) {
       toast('Failed to create clinic: ' + err.message, 'error')
+    }
+  }
+
+  const handleConfirmDeleteBranch = async () => {
+    if (!clinicToDelete) return
+    if (clinics.length <= 1) {
+      toast('Cannot delete the only branch. An account must have at least one active branch.', 'warning')
+      setClinicToDelete(null)
+      return
+    }
+
+    setDeletingClinic(true)
+    try {
+      await deleteClinic(clinicToDelete.id)
+      toast(`Branch "${clinicToDelete.name}" successfully deleted`, 'success')
+      setClinicToDelete(null)
+    } catch (err) {
+      toast('Failed to delete branch: ' + err.message, 'error')
+    } finally {
+      setDeletingClinic(false)
     }
   }
 
@@ -192,11 +214,34 @@ export default function Settings() {
                       {c.address || 'Uganda'} {c.phone ? `· ${c.phone}` : ''} &middot; <strong style={{ color: 'var(--brand)' }}>{c.bed_capacity || 20} Inpatient Beds</strong>
                     </div>
                   </div>
-                  {isCurrent && (
-                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
-                      Active Branch
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {isCurrent && (
+                      <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                        Active Branch
+                      </span>
+                    )}
+                    {clinics.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setClinicToDelete(c)
+                        }}
+                        className="btn-icon"
+                        style={{
+                          color: 'var(--danger)',
+                          padding: '6px',
+                          borderRadius: '6px',
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          cursor: 'pointer'
+                        }}
+                        title={`Delete branch ${c.name}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}
@@ -429,6 +474,57 @@ export default function Settings() {
               <button type="submit" className="btn btn-primary">Create Branch</button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Delete Branch Confirmation Modal */}
+      {clinicToDelete && (
+        <Modal title={`Delete Clinic Branch: ${clinicToDelete.name}`} onClose={() => setClinicToDelete(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              padding: '1rem',
+              color: '#f87171',
+              display: 'flex',
+              gap: '0.75rem',
+              alignItems: 'flex-start'
+            }}>
+              <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong style={{ display: 'block', marginBottom: '0.25rem', color: '#fff' }}>
+                  Are you sure you want to delete this clinic branch?
+                </strong>
+                This action will delete branch <strong>"{clinicToDelete.name}"</strong> ({clinicToDelete.address || 'Uganda'}) from both your local database and Supabase cloud.
+              </div>
+            </div>
+
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Note: If this branch was currently active, the system will automatically switch to your next available branch.
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={deletingClinic}
+                onClick={() => setClinicToDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={deletingClinic}
+                onClick={handleConfirmDeleteBranch}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Trash2 size={15} />
+                <span>{deletingClinic ? 'Deleting Branch...' : 'Delete Branch'}</span>
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 

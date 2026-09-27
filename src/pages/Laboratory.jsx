@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import {
   FlaskConical, Plus, Search, CheckCircle2, Clock,
-  FileCheck, AlertCircle, RefreshCw, Trash2, Tag, DollarSign
+  FileCheck, AlertCircle, RefreshCw, Trash2, Tag, DollarSign,
+  Send
 } from 'lucide-react'
 import { useClinicStore, useToastStore } from '../store'
 import { localGetAll, localAdd, localPut } from '../lib/db'
@@ -198,7 +199,7 @@ export default function Laboratory() {
     }
   }
 
-  // Finalize / Release result
+  // Finalize / Release result & Send back to clinician
   const handleSaveResult = async () => {
     if (!selectedRequest || !resultText.trim()) {
       toast('Please enter diagnostic test findings', 'warning')
@@ -206,16 +207,20 @@ export default function Laboratory() {
     }
 
     try {
-      // Update lab request status
+      // Update lab request status as completed and results sent back
       await localPut('lab_requests', {
         ...selectedRequest,
         status: 'completed',
         results: resultText.trim(),
+        results_sent_back: true,
+        returned_to: selectedRequest.requested_by || 'Staff Clinician / OPD',
+        returned_at: new Date().toISOString(),
         completed_by: 'Staff Lab Technologist',
+        clinical_notes: resultNotes.trim() || selectedRequest.clinical_notes || null,
         updated_at: new Date().toISOString(),
       })
 
-      toast(`Test results finalized and released to patient file!`, 'success')
+      toast(`Test results for ${selectedRequest.test_name} marked as BACK and sent to doctor (${selectedRequest.patient_name})!`, 'success')
       setResultModalOpen(false)
       setSelectedRequest(null)
       setResultText('')
@@ -223,6 +228,26 @@ export default function Laboratory() {
       loadData()
     } catch (err) {
       toast('Failed to save result: ' + err.message, 'error')
+    }
+  }
+
+  // Quick action: send results back to doctor
+  const handleSendBack = async (req) => {
+    try {
+      await localPut('lab_requests', {
+        ...req,
+        status: 'completed',
+        results: req.results || 'Test completed by laboratory.',
+        results_sent_back: true,
+        returned_to: req.requested_by || 'Staff Clinician / OPD',
+        returned_at: new Date().toISOString(),
+        completed_by: 'Staff Lab Technologist',
+        updated_at: new Date().toISOString(),
+      })
+      toast(`Lab results for ${req.test_name} transmitted back to attending clinician!`, 'success')
+      loadData()
+    } catch (err) {
+      toast('Failed to send results back: ' + err.message, 'error')
     }
   }
 
@@ -289,9 +314,10 @@ export default function Laboratory() {
         background: 'var(--card-bg, #1e293b)',
         borderRadius: '12px',
         border: '1px solid var(--border, #334155)',
-        overflow: 'hidden'
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+        <table className="table" style={{ width: '100%', minWidth: '700px', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border)' }}>
               <th style={{ padding: '0.85rem 1rem' }}>Patient Name</th>
@@ -312,7 +338,7 @@ export default function Laboratory() {
               </tr>
             ) : (
               filteredRequests.map(req => {
-                const isPending = req.status === 'pending'
+                const isCompleted = req.status === 'completed' || !!req.results
                 return (
                   <tr key={req.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{req.patient_name}</td>
@@ -329,9 +355,20 @@ export default function Laboratory() {
                       {req.requested_by || 'Staff Clinician'}
                     </td>
                     <td style={{ padding: '0.85rem 1rem' }}>
-                      <span className={`badge ${isPending ? 'badge-warning' : 'badge-success'}`}>
-                        {isPending ? 'Pending' : 'Completed'}
-                      </span>
+                      {isCompleted ? (
+                        <div>
+                          <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={12} /> Results Back & Sent
+                          </span>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--brand)', marginTop: '2px' }}>
+                            Sent to Doctor
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Clock size={12} /> Pending Analysis
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>
                       {req.results ? (
@@ -341,31 +378,46 @@ export default function Laboratory() {
                       )}
                     </td>
                     <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                      {isPending ? (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => {
-                            setSelectedRequest(req)
-                            const matched = COMMON_LAB_TESTS.find(t => t.name === req.test_name)
-                            setResultText(matched ? matched.normal : '')
-                            setResultModalOpen(true)
-                          }}
-                        >
-                          Enter Result
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => {
-                            setSelectedRequest(req)
-                            setResultText(req.results || '')
-                            setResultNotes(req.clinical_notes || '')
-                            setResultModalOpen(true)
-                          }}
-                        >
-                          View / Edit
-                        </button>
-                      )}
+                      <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        {!isCompleted ? (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            onClick={() => {
+                              setSelectedRequest(req)
+                              const matched = COMMON_LAB_TESTS.find(t => t.name === req.test_name)
+                              setResultText(matched ? matched.normal : '')
+                              setResultModalOpen(true)
+                            }}
+                          >
+                            <Send size={12} />
+                            <span>Enter & Send</span>
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => {
+                                setSelectedRequest(req)
+                                setResultText(req.results || '')
+                                setResultNotes(req.clinical_notes || '')
+                                setResultModalOpen(true)
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--brand)' }}
+                              onClick={() => handleSendBack(req)}
+                              title="Send back results to attending clinician"
+                            >
+                              <Send size={12} />
+                              <span>Send Back</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -607,11 +659,22 @@ export default function Laboratory() {
 
       {/* Result Entry Modal */}
       {resultModalOpen && selectedRequest && (
-        <Modal title={`Enter Test Results: ${selectedRequest.test_name}`} onClose={() => setResultModalOpen(false)}>
+        <Modal title={`Diagnostic Results: ${selectedRequest.test_name}`} onClose={() => setResultModalOpen(false)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '8px',
+              padding: '0.75rem 1rem',
+              fontSize: '0.85rem',
+              color: 'var(--brand)'
+            }}>
+              Results entered here will be marked as <strong>Back</strong> and transmitted immediately to the patient file and attending clinician.
+            </div>
+
             <div>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Patient:</span>
-              <div style={{ fontWeight: 600 }}>{selectedRequest.patient_name}</div>
+              <div style={{ fontWeight: 600, fontSize: '1rem' }}>{selectedRequest.patient_name}</div>
             </div>
 
             <div>
@@ -639,7 +702,15 @@ export default function Laboratory() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button type="button" className="btn btn-secondary" onClick={() => setResultModalOpen(false)}>Cancel</button>
-              <button type="button" className="btn btn-primary" onClick={handleSaveResult}>Validate & Release Result</button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSaveResult}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Send size={15} />
+                <span>Save & Send Results Back to Doctor</span>
+              </button>
             </div>
           </div>
         </Modal>

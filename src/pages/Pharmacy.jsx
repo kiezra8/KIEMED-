@@ -52,6 +52,7 @@ export default function Pharmacy() {
   const [pharmacistName, setPharmacistName] = useState('Staff Pharmacist')
 
   // Direct OTC Pass-by Patient Sale Form
+  const [otcDrugSearch, setOtcDrugSearch] = useState('')
   const [otcForm, setOtcForm] = useState({
     customer_name: 'Walk-in Customer',
     customer_phone: '',
@@ -286,6 +287,7 @@ export default function Pharmacy() {
         payment_method: 'Cash',
         notes: '',
       })
+      setOtcDrugSearch('')
       loadData()
     } catch (err) {
       toast('Error processing direct sale: ' + err.message, 'error')
@@ -801,14 +803,119 @@ export default function Pharmacy() {
             </div>
 
             <div>
-              <label className="label">Select Medicine to Dispense *</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <label className="label" style={{ margin: 0 }}>Select Medicine to Dispense *</label>
+                {otcForm.drug_id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtcForm({ ...otcForm, drug_id: '' })
+                      setOtcDrugSearch('')
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--brand)', fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    Clear Selection
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Drug Search Input */}
+              <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+                <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  className="input"
+                  style={{ paddingLeft: '32px', paddingRight: otcDrugSearch ? '30px' : '10px', fontSize: '0.85rem' }}
+                  placeholder="Type to search medicine name or category (e.g. Paracetamol, Coartem, Amox)..."
+                  value={otcDrugSearch}
+                  onChange={(e) => setOtcDrugSearch(e.target.value)}
+                />
+                {otcDrugSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setOtcDrugSearch('')}
+                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem' }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Search Results List */}
+              <div style={{
+                maxHeight: '170px',
+                overflowY: 'auto',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                background: 'var(--surface-color)',
+                marginBottom: '0.6rem',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                {inventory
+                  .filter(d => {
+                    if (!otcDrugSearch.trim()) return true
+                    const term = otcDrugSearch.toLowerCase()
+                    return (
+                      d.name?.toLowerCase().includes(term) ||
+                      d.category?.toLowerCase().includes(term) ||
+                      d.supplier?.toLowerCase().includes(term)
+                    )
+                  })
+                  .slice(0, 30)
+                  .map(d => {
+                    const isSelected = otcForm.drug_id === d.id
+                    const isOutOfStock = d.current_stock <= 0
+                    return (
+                      <div
+                        key={d.id}
+                        onClick={() => {
+                          if (!isOutOfStock) {
+                            setOtcForm({ ...otcForm, drug_id: d.id })
+                          }
+                        }}
+                        style={{
+                          padding: '0.6rem 0.8rem',
+                          borderBottom: '1px solid var(--border)',
+                          cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                          background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                          opacity: isOutOfStock ? 0.5 : 1,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: isSelected ? 'var(--brand)' : 'var(--text-primary)' }}>
+                            {d.name}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            {d.category} &middot; {d.unit}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--brand)' }}>
+                            UGX {Number(d.unit_price || 0).toLocaleString()}
+                          </div>
+                          <span className={`badge ${isOutOfStock ? 'badge-danger' : d.current_stock <= 10 ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '0.68rem' }}>
+                            {isOutOfStock ? 'Out of Stock' : `${d.current_stock} in stock`}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+
+              {/* Standard Fallback Dropdown */}
               <select
                 className="input"
                 required
                 value={otcForm.drug_id}
                 onChange={(e) => setOtcForm({ ...otcForm, drug_id: e.target.value })}
+                style={{ fontSize: '0.85rem' }}
               >
-                <option value="">-- Choose Medication from Inventory --</option>
+                <option value="">-- Or choose from complete dropdown list --</option>
                 {inventory.map(d => (
                   <option key={d.id} value={d.id} disabled={d.current_stock <= 0}>
                     {d.name} &middot; ({d.category}) &middot; Stock: {d.current_stock} {d.unit} &middot; UGX {Number(d.unit_price || 0).toLocaleString()} {d.current_stock <= 0 ? '(Out of Stock)' : ''}

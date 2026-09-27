@@ -834,17 +834,82 @@ textarea.input { resize: vertical; min-height: 80px; }
   .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
   .sidebar-overlay {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,.5);
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(2px);
     z-index: 199;
   }
-  .app-content { padding: 16px; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .app-content { padding: 12px 10px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .form-grid { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 640px) {
+  .app-header {
+    height: 52px;
+    padding: 0 10px;
+  }
+  .app-content {
+    padding: 8px 6px;
+  }
+  /* Avoid wasted margins on small screens */
+  .app-content > div {
+    padding: 0.75rem 0.5rem !important;
+  }
+  /* Table touch responsiveness and readability */
+  .table-wrap, .table-responsive, [class*="table-wrap"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+  }
+  table th {
+    padding: 8px 10px !important;
+    font-size: 0.7rem !important;
+  }
+  table td {
+    padding: 8px 10px !important;
+    font-size: 0.8rem !important;
+  }
+  /* Buttons & touch targets */
+  .btn {
+    min-height: 38px;
+    padding: 8px 14px;
+    font-size: 0.84rem;
+  }
+  .btn-sm {
+    min-height: 32px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+  }
+  /* Form controls on mobile (16px base font prevents iOS auto-zoom) */
+  .input, .form-control, select, textarea {
+    font-size: 16px !important;
+    min-height: 40px;
+  }
+  /* Badges */
+  .badge {
+    padding: 2px 7px;
+    font-size: 0.7rem;
+  }
+}
+
 @media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .modal { max-height: 100vh; border-radius: 0; margin: 0; }
-  .modal-overlay { padding: 0; align-items: flex-end; }
+  .stats-grid { grid-template-columns: 1fr; gap: 8px; }
+  .modal-overlay {
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal {
+    max-height: 92vh;
+    width: 96% !important;
+    max-width: 96% !important;
+    border-radius: 12px;
+    margin: 0 auto;
+    padding: 16px 14px;
+  }
+  .stat-value {
+    font-size: 1.35rem;
+  }
 }
 
 /* ── Utilities ───────────────────────────────────────────────── */

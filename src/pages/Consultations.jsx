@@ -368,6 +368,83 @@ export default function Consultations() {
             </div>
           )}
 
+          {/* RETURNED DIAGNOSTIC LAB RESULTS */}
+          {selectedPatient && patientPastLabs.length > 0 && (
+            <div style={{
+              background: 'rgba(2, 132, 199, 0.08)',
+              border: '1px solid rgba(2, 132, 199, 0.3)',
+              borderRadius: '12px',
+              padding: '1.25rem 1.5rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <FlaskConical size={18} color="#38bdf8" />
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#38bdf8' }}>
+                    Diagnostic Laboratory Results Returned ({patientPastLabs.filter(l => l.status === 'completed' || !!l.results).length} Back / {patientPastLabs.length} Total)
+                  </h3>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Live cross-department laboratory feed
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
+                {patientPastLabs.map((lab, i) => {
+                  const isBack = lab.status === 'completed' || !!lab.results
+                  return (
+                    <div key={lab.id || i} style={{
+                      background: 'var(--surface-color, #0f172a)',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      border: isBack ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.35rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{lab.test_name || lab.tests}</span>
+                        <span className={`badge ${isBack ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.68rem', fontWeight: 700 }}>
+                          {isBack ? '✓ RESULTS BACK' : 'IN LAB'}
+                        </span>
+                      </div>
+
+                      {isBack ? (
+                        <>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--brand)', background: 'rgba(16, 185, 129, 0.08)', padding: '0.4rem 0.6rem', borderRadius: '4px' }}>
+                            Findings: {lab.results}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              By: {lab.completed_by || 'Lab Tech'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setConsultForm(prev => ({
+                                  ...prev,
+                                  hpi: prev.hpi ? `${prev.hpi}\n[Lab: ${lab.test_name}]: ${lab.results}` : `[Lab: ${lab.test_name}]: ${lab.results}`
+                                }))
+                                toast(`Lab findings added to Consultation Notes`, 'success')
+                              }}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                            >
+                              Insert in Notes
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          Awaiting laboratory analysis and release...
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* LATEST TRIAGE SIGNS BAR (IF AVAILABLE) */}
           {latestVital && (
             <div style={{

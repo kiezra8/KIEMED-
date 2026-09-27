@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react'
 import {
   Calendar as CalendarIcon, Plus, CheckCircle2, Clock,
-  Users, UserCheck, AlertCircle
+  Users, UserCheck, AlertCircle, RefreshCw, Search
 } from 'lucide-react'
-import { useClinicStore, useToastStore } from '../store'
+import { useClinicStore, useToastStore, useSyncStore } from '../store'
 import { localGetAll, localAdd, localPut } from '../lib/db'
 import Modal from '../components/ui/Modal'
 
 export default function Appointments() {
   const { currentClinic } = useClinicStore()
   const { add: toast } = useToastStore()
+  const { isOnline, isSyncing, sync } = useSyncStore()
 
   const [appointments, setAppointments] = useState([])
   const [patients, setPatients] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [formData, setFormData] = useState({
     patient_id: '',
@@ -25,6 +27,19 @@ export default function Appointments() {
 
   useEffect(() => {
     loadAppointments()
+    // Sync with cloud on load to pull appointments booked on other devices
+    if (currentClinic?.id && navigator.onLine) {
+      sync(currentClinic.id).catch(() => {})
+    }
+
+    const handler = (e) => {
+      const tbl = e.detail?.table
+      if (!tbl || tbl === 'all' || ['appointments', 'patients'].includes(tbl)) {
+        loadAppointments()
+      }
+    }
+    window.addEventListener('kiemed-data-change', handler)
+    return () => window.removeEventListener('kiemed-data-change', handler)
   }, [currentClinic?.id])
 
   const loadAppointments = async () => {
@@ -36,6 +51,18 @@ export default function Appointments() {
 
     setAppointments(apts || [])
     setPatients(pts || [])
+  }
+
+  const handleManualSync = async () => {
+    if (!currentClinic?.id) return
+    if (!isOnline) {
+      toast('Device is offline. Connect to internet to sync across devices.', 'warning')
+      return
+    }
+    toast('Syncing appointments with cloud...', 'info')
+    await sync(currentClinic.id)
+    await loadAppointments()
+    toast('Appointments updated from all devices!', 'success')
   }
 
   const handleCreate = async (e) => {
@@ -71,42 +98,82 @@ export default function Appointments() {
     }
   }
 
+  const filteredAppointments = appointments.filter(apt => {
+    if (!searchTerm.trim()) return true
+    const term = searchTerm.toLowerCase()
+    return (
+      apt.patient_name?.toLowerCase().includes(term) ||
+      apt.appointment_type?.toLowerCase().includes(term) ||
+      apt.doctor?.toLowerCase().includes(term) ||
+      apt.appointment_date?.includes(term)
+    )
+  })
+
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '1rem', maxWidth: '1400px', margin: '0 auto' }}>
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         alignItems: 'center',
         gap: '1rem',
-        marginBottom: '1.5rem'
+        marginBottom: '1.25rem'
       }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0 0 0.25rem' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 0.25rem' }}>
             Appointments & Clinic Scheduling
           </h1>
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            ANC visits, pediatric immunization schedules & chronic disease follow-ups
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            Multi-device synced ANC visits, pediatric immunization schedules & chronic disease follow-ups
           </p>
         </div>
 
-        <button
-          onClick={() => setModalOpen(true)}
-          className="btn btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <Plus size={16} />
-          <span>Book Appointment</span>
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleManualSync}
+            disabled={isSyncing}
+            className="btn btn-secondary"
+            title="Pull and sync appointments across all devices"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <RefreshCw size={15} className={isSyncing ? 'spin' : ''} />
+            <span>{isSyncing ? 'Syncing...' : 'Sync Devices'}</span>
+          </button>
+
+          <button
+            onClick={() => setModalOpen(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Plus size={16} />
+            <span>Book Appointment</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Search */}
+      <div style={{ marginBottom: '1rem' }}>
+        <div style={{ position: 'relative', maxWidth: '400px' }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            className="input"
+            style={{ paddingLeft: '36px' }}
+            placeholder="Search appointments by patient, service, doctor..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
       <div style={{
         background: 'var(--card-bg, #1e293b)',
         borderRadius: '12px',
         border: '1px solid var(--border, #334155)',
-        overflow: 'hidden'
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+        <table className="table" style={{ width: '100%', minWidth: '600px', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border)' }}>
               <th style={{ padding: '0.85rem 1rem' }}>Patient Name</th>
@@ -118,14 +185,14 @@ export default function Appointments() {
             </tr>
           </thead>
           <tbody>
-            {appointments.length === 0 ? (
+            {filteredAppointments.length === 0 ? (
               <tr>
                 <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-                  No appointments booked.
+                  {searchTerm ? 'No appointments match your search.' : 'No appointments booked.'}
                 </td>
               </tr>
             ) : (
-              appointments.map(apt => (
+              filteredAppointments.map(apt => (
                 <tr key={apt.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{apt.patient_name}</td>
                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>{apt.appointment_type}</td>

@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Activity, Stethoscope, BedDouble,
   Pill, FlaskConical, Receipt, Badge, Calendar, BarChart3,
   Settings, ChevronRight, Menu, X, Wifi, WifiOff, RefreshCw,
-  Building2, Plus, LogOut
+  Building2, Plus, LogOut, Trash2
 } from 'lucide-react'
 import { useClinicStore, useSyncStore, useToastStore, useAuthStore } from '../../store'
 import Modal from '../ui/Modal'
@@ -27,7 +27,7 @@ const NAV = [
 export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [clinicModal, setClinicModal] = useState(false)
-  const { currentClinic, clinics, setCurrentClinic, createClinic } = useClinicStore()
+  const { currentClinic, clinics, setCurrentClinic, createClinic, deleteClinic } = useClinicStore()
   const { isOnline, isSyncing, lastSyncAt, sync } = useSyncStore()
   const { add: toast } = useToastStore()
   const { user, signOut } = useAuthStore()
@@ -125,10 +125,22 @@ export default function AppLayout({ children }) {
       <div className="app-main">
         {/* Header */}
         <header className="app-header">
-          <div className="header-left">
-            <button className="btn-icon" onClick={() => setSidebarOpen(s => !s)}>
-              {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+          <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button className="btn-icon" onClick={() => setSidebarOpen(s => !s)} aria-label="Toggle Navigation Menu">
+              {sidebarOpen ? <X size={19} /> : <Menu size={19} />}
             </button>
+            <div
+              className="mobile-clinic-title"
+              onClick={() => setClinicModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+              title="Switch or manage clinic branches"
+            >
+              <Building2 size={15} color="var(--brand)" />
+              <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentClinic?.name || 'KIEMED HMS'}
+              </span>
+              <ChevronRight size={12} color="var(--text-muted)" />
+            </div>
           </div>
           <div className="header-right">
             {/* Sync status */}
@@ -165,7 +177,36 @@ export default function AppLayout({ children }) {
                     <div style={{ fontWeight: 600, fontSize: '.875rem' }}>{c.name}</div>
                     {c.address && <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{c.address}</div>}
                   </div>
-                  {c.id === currentClinic?.id && <span style={{ fontSize: '.7rem', color: 'var(--brand)', fontWeight: 700 }}>ACTIVE</span>}
+                  {c.id === currentClinic?.id && <span style={{ fontSize: '.7rem', color: 'var(--brand)', fontWeight: 700, marginRight: 6 }}>ACTIVE</span>}
+                  {clinics.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        if (window.confirm(`Are you sure you want to delete clinic branch "${c.name}"?`)) {
+                          try {
+                            await deleteClinic(c.id)
+                            toast(`Branch "${c.name}" deleted`, 'success')
+                          } catch (err) {
+                            toast(err.message, 'error')
+                          }
+                        }
+                      }}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        color: 'var(--danger)',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        padding: '4px 6px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title="Delete Branch"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

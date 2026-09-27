@@ -229,6 +229,47 @@ export const useClinicStore = create(
 
         return clinic
       },
+
+      deleteClinic: async (clinicId) => {
+        const currentList = get().clinics
+        if (currentList.length <= 1) {
+          throw new Error('You cannot delete your only clinic branch. Your account must maintain at least one active branch.')
+        }
+
+        // 1. Delete from local database
+        await localDelete('clinics', clinicId)
+        try {
+          await localDB.clinic_settings.where('clinic_id').equals(clinicId).delete()
+        } catch (e) {}
+
+        // 2. Delete from Supabase if online
+        if (navigator.onLine) {
+          try {
+            await supabase.from('clinics').delete().eq('id', clinicId)
+          } catch (e) {
+            console.warn('[clinic] Remote delete clinic error:', e)
+          }
+        }
+
+        // 3. Switch active clinic if the active one was deleted
+        const remaining = currentList.filter(c => c.id !== clinicId)
+        let nextActive = get().currentClinic
+        if (get().currentClinicId === clinicId) {
+          nextActive = remaining[0] || null
+        }
+
+        set({
+          clinics: remaining,
+          currentClinicId: nextActive?.id || null,
+          currentClinic: nextActive,
+        })
+
+        if (nextActive?.id && navigator.onLine) {
+          useSyncStore.getState().startListening(nextActive.id)
+        }
+
+        return remaining
+      },
     }),
     {
       name: 'kiemed-clinic',
