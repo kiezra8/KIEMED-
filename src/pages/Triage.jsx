@@ -787,7 +787,7 @@ export default function Triage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', maxHeight: '680px' }}>
-              {recentVitals.map(v => (
+              {recentVitals.map((v, vIdx) => (
                 <div
                   key={v.id}
                   style={{
@@ -799,11 +799,16 @@ export default function Triage() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem' }}>
-                    <div>
-                      <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>{v.patient_name || 'Patient'}</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
-                        {v.created_at?.slice(11, 16)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ background: 'var(--brand)', color: '#fff', borderRadius: '50%', width: '20px', height: '20px', fontSize: '0.65rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {vIdx + 1}
                       </span>
+                      <div>
+                        <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>{v.patient_name || 'Patient'}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                          {v.created_at?.slice(11, 16)}
+                        </span>
+                      </div>
                     </div>
                     <span className={`badge ${v.priority?.includes('Red') ? 'badge-danger' : v.priority?.includes('Yellow') ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
                       {v.priority?.split(' ')[0]}

@@ -70,7 +70,7 @@ export function sanitizeRecordForSupabase(table, record) {
     case 'consultations': {
       let prescriptionStr = clean.prescription || ''
       if (typeof clean.prescriptions === 'object') {
-        try { prescriptionStr = JSON.stringify(clean.prescriptions) } catch (e) {}
+        try { prescriptionStr = JSON.stringify(clean.prescriptions) } catch (e) { }
       }
       return {
         id: clean.id,

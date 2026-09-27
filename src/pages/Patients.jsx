@@ -379,6 +379,7 @@ _Official Medical File generated via KIEMED Hospital Management System._`
               <table>
                 <thead>
                   <tr>
+                    <th style="width: 36px; text-align: center;">#</th>
                     <th>Date & Time</th>
                     <th>BP</th>
                     <th>Pulse</th>
@@ -389,8 +390,9 @@ _Official Medical File generated via KIEMED Hospital Management System._`
                   </tr>
                 </thead>
                 <tbody>
-                  ${patientRecords.vitals.map(v => `
+                  ${patientRecords.vitals.map((v, i) => `
                     <tr>
+                      <td style="text-align: center; color: #64748b;">${i + 1}</td>
                       <td>${v.created_at?.slice(0, 16).replace('T', ' ')}</td>
                       <td>${v.blood_pressure || '--'}</td>
                       <td>${v.heart_rate || '--'} bpm</td>
@@ -414,6 +416,7 @@ _Official Medical File generated via KIEMED Hospital Management System._`
               <table>
                 <thead>
                   <tr>
+                    <th style="width: 36px; text-align: center;">#</th>
                     <th>Date</th>
                     <th>Diagnosis</th>
                     <th>Doctor</th>
@@ -421,8 +424,9 @@ _Official Medical File generated via KIEMED Hospital Management System._`
                   </tr>
                 </thead>
                 <tbody>
-                  ${patientRecords.consults.map(c => `
+                  ${patientRecords.consults.map((c, i) => `
                     <tr>
+                      <td style="text-align: center; color: #64748b;">${i + 1}</td>
                       <td>${c.created_at?.slice(0, 16).replace('T', ' ')}</td>
                       <td><strong>${c.diagnosis || 'Undiagnosed'}</strong></td>
                       <td>${c.doctor || 'Attending Physician'}</td>
@@ -440,6 +444,7 @@ _Official Medical File generated via KIEMED Hospital Management System._`
               <table>
                 <thead>
                   <tr>
+                    <th style="width: 36px; text-align: center;">#</th>
                     <th>Date</th>
                     <th>Test Ordered</th>
                     <th>Result / Findings</th>
@@ -447,8 +452,9 @@ _Official Medical File generated via KIEMED Hospital Management System._`
                   </tr>
                 </thead>
                 <tbody>
-                  ${patientRecords.labs.map(l => `
+                  ${patientRecords.labs.map((l, i) => `
                     <tr>
+                      <td style="text-align: center; color: #64748b;">${i + 1}</td>
                       <td>${l.created_at?.slice(0, 16).replace('T', ' ')}</td>
                       <td>${l.test_name || l.tests}</td>
                       <td>${l.results || 'Pending Lab Processing'}</td>
@@ -492,6 +498,7 @@ _Official Medical File generated via KIEMED Hospital Management System._`
               <table>
                 <thead>
                   <tr>
+                    <th style="width: 36px; text-align: center;">#</th>
                     <th>Date</th>
                     <th>Medications Dispensed</th>
                     <th>Dispensed By</th>
@@ -499,8 +506,9 @@ _Official Medical File generated via KIEMED Hospital Management System._`
                   </tr>
                 </thead>
                 <tbody>
-                  ${patientRecords.dispensing.map(d => `
+                  ${patientRecords.dispensing.map((d, i) => `
                     <tr>
+                      <td style="text-align: center; color: #64748b;">${i + 1}</td>
                       <td>${d.dispensed_at?.slice(0, 16).replace('T', ' ')}</td>
                       <td>${d.items}</td>
                       <td>${d.dispensed_by || 'Pharmacist'}</td>
@@ -621,11 +629,13 @@ _Official Medical File generated via KIEMED Hospital Management System._`
         background: 'var(--card-bg, var(--surface-1))',
         borderRadius: '12px',
         border: '1px solid var(--border)',
-        overflow: 'hidden'
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+        <table className="table" style={{ width: '100%', minWidth: '700px', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '0.85rem 0.75rem', width: '48px', textAlign: 'center' }}>#</th>
               <th style={{ padding: '0.85rem 1rem' }}>Patient Name</th>
               <th style={{ padding: '0.85rem 1rem' }}>Gender / Age</th>
               <th style={{ padding: '0.85rem 1rem' }}>Phone & Location</th>
@@ -637,7 +647,7 @@ _Official Medical File generated via KIEMED Hospital Management System._`
           <tbody>
             {filteredPatients.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
                   <Users size={32} style={{ opacity: 0.4, marginBottom: '0.5rem' }} />
                   <div style={{ fontWeight: 600 }}>No patients registered yet</div>
                   <p style={{ fontSize: '0.813rem', margin: '0.25rem 0 1rem' }}>
@@ -646,12 +656,15 @@ _Official Medical File generated via KIEMED Hospital Management System._`
                 </td>
               </tr>
             ) : (
-              filteredPatients.map(p => (
+              filteredPatients.map((p, idx) => (
                 <tr
                   key={p.id}
                   style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
                   onClick={() => openPatientChart(p)}
                 >
+                  <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    {idx + 1}
+                  </td>
                   <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>
                     <div>{p.first_name} {p.last_name}</div>
                     {p.nin && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>NIN: {p.nin}</span>}

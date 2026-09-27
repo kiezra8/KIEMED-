@@ -176,6 +176,7 @@ export default function Appointments() {
         <table className="table" style={{ width: '100%', minWidth: '600px', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '0.85rem 0.75rem', width: '48px', textAlign: 'center' }}>#</th>
               <th style={{ padding: '0.85rem 1rem' }}>Patient Name</th>
               <th style={{ padding: '0.85rem 1rem' }}>Clinic Service</th>
               <th style={{ padding: '0.85rem 1rem' }}>Date & Time</th>
@@ -187,13 +188,16 @@ export default function Appointments() {
           <tbody>
             {filteredAppointments.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                   {searchTerm ? 'No appointments match your search.' : 'No appointments booked.'}
                 </td>
               </tr>
             ) : (
-              filteredAppointments.map(apt => (
+              filteredAppointments.map((apt, idx) => (
                 <tr key={apt.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    {idx + 1}
+                  </td>
                   <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{apt.patient_name}</td>
                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>{apt.appointment_type}</td>
                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem' }}>

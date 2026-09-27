@@ -320,6 +320,7 @@ export default function Laboratory() {
         <table className="table" style={{ width: '100%', minWidth: '700px', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '0.85rem 0.75rem', width: '48px', textAlign: 'center' }}>#</th>
               <th style={{ padding: '0.85rem 1rem' }}>Patient Name</th>
               <th style={{ padding: '0.85rem 1rem' }}>Test Investigation</th>
               <th style={{ padding: '0.85rem 1rem' }}>Cost (UGX)</th>
@@ -332,15 +333,18 @@ export default function Laboratory() {
           <tbody>
             {filteredRequests.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                   No laboratory requests found matching this filter.
                 </td>
               </tr>
             ) : (
-              filteredRequests.map(req => {
+              filteredRequests.map((req, idx) => {
                 const isCompleted = req.status === 'completed' || !!req.results
                 return (
                   <tr key={req.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
+                      {idx + 1}
+                    </td>
                     <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{req.patient_name}</td>
                     <td style={{ padding: '0.85rem 1rem' }}>
                       <div style={{ fontWeight: 600 }}>{req.test_name || req.tests}</div>

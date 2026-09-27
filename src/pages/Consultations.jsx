@@ -612,7 +612,8 @@ export default function Consultations() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {prescriptions.map((rx, idx) => (
-                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '0.5rem', alignItems: 'center' }}>
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '32px 2fr 1fr 1fr 1fr auto', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--brand)', textAlign: 'center' }}>#{idx + 1}</span>
                       <input
                         type="text"
                         className="input"
@@ -693,7 +694,8 @@ export default function Consultations() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {labOrders.map((lb, idx) => (
-                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr auto', gap: '0.5rem', alignItems: 'center' }}>
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '32px 2fr 2fr auto', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--brand)', textAlign: 'center' }}>#{idx + 1}</span>
                       <input
                         type="text"
                         className="input"

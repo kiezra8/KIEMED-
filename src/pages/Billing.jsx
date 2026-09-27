@@ -502,6 +502,7 @@ _Generated via KIEMED Hospital Management System_`
         <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '0.85rem 0.75rem', width: '48px', textAlign: 'center' }}>#</th>
               <th style={{ padding: '0.85rem 1rem' }}>Patient Name</th>
               <th style={{ padding: '0.85rem 1rem' }}>Service Description</th>
               <th style={{ padding: '0.85rem 1rem' }}>Total Bill</th>
@@ -514,7 +515,7 @@ _Generated via KIEMED Hospital Management System_`
           <tbody>
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
                   <Receipt size={32} style={{ opacity: 0.4, marginBottom: '0.5rem' }} />
                   <div style={{ fontWeight: 600 }}>No billing transactions found</div>
                   <p style={{ fontSize: '0.813rem', margin: '0.25rem 0 1rem' }}>
@@ -523,7 +524,7 @@ _Generated via KIEMED Hospital Management System_`
                 </td>
               </tr>
             ) : (
-              filteredInvoices.map(inv => {
+              filteredInvoices.map((inv, idx) => {
                 const due = Number(inv.amount_due) || 0
                 const paid = Number(inv.amount_paid) || 0
                 const bal = Math.max(0, due - paid)
@@ -531,6 +532,9 @@ _Generated via KIEMED Hospital Management System_`
 
                 return (
                   <tr key={inv.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
+                      {idx + 1}
+                    </td>
                     <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>
                       <div>{inv.patient_name}</div>
                       {(inv.is_direct_sale || inv.category?.includes('OTC')) && (

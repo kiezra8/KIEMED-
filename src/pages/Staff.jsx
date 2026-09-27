@@ -91,7 +91,7 @@ export default function Staff() {
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
         gap: '1.25rem'
       }}>
-        {staffList.map(s => (
+        {staffList.map((s, idx) => (
           <div
             key={s.id}
             style={{
@@ -115,9 +115,14 @@ export default function Staff() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 700,
-                fontSize: '1rem'
+                fontSize: '1rem',
+                position: 'relative',
+                flexShrink: 0
               }}>
                 {s.name?.slice(0, 2).toUpperCase()}
+                <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'var(--brand)', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '0.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                  {idx + 1}
+                </span>
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>{s.name}</h3>

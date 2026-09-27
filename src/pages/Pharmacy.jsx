@@ -521,9 +521,10 @@ export default function Pharmacy() {
             border: '1px solid var(--border)',
             overflow: 'hidden'
           }}>
-            <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+            <table className="table" style={{ width: '100%', minWidth: '700px', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '0.85rem 0.75rem', width: '48px', textAlign: 'center' }}>#</th>
                   <th style={{ padding: '0.85rem 1rem' }}>Medicine Name</th>
                   <th style={{ padding: '0.85rem 1rem' }}>Drug Category</th>
                   <th style={{ padding: '0.85rem 1rem' }}>Stock Level</th>
@@ -536,7 +537,7 @@ export default function Pharmacy() {
               <tbody>
                 {filteredInventory.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
                       <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>💊</div>
                       <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>No medicines found in this category</div>
                       <p style={{ margin: '0.25rem 0 1rem', fontSize: '0.813rem' }}>
@@ -557,10 +558,13 @@ export default function Pharmacy() {
                     </td>
                   </tr>
                 ) : (
-                  filteredInventory.map(item => {
+                  filteredInventory.map((item, idx) => {
                     const isLow = item.current_stock <= (item.reorder_level || 20)
                     return (
                       <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
+                          {idx + 1}
+                        </td>
                         <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>
                           <div>{item.name}</div>
                           {item.supplier && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Supplier: {item.supplier}</span>}
@@ -666,9 +670,10 @@ export default function Pharmacy() {
             Clinic Doctor Prescriptions Pending Fulfillment ({pendingDispensing.length})
           </div>
 
-          <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="table" style={{ width: '100%', minWidth: '600px', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                <th style={{ padding: '0.85rem 0.75rem', width: '48px', textAlign: 'center' }}>#</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Patient Name</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Prescribed Drugs</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Time Ordered</th>
@@ -678,13 +683,16 @@ export default function Pharmacy() {
             <tbody>
               {pendingDispensing.length === 0 ? (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                     No pending doctor prescriptions waiting in queue.
                   </td>
                 </tr>
               ) : (
-                pendingDispensing.map(item => (
+                pendingDispensing.map((item, idx) => (
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
+                      {idx + 1}
+                    </td>
                     <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{item.patient_name}</td>
                     <td style={{ padding: '0.85rem 1rem', fontSize: '0.875rem' }}>{item.items || 'Standard prescription'}</td>
                     <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -721,9 +729,10 @@ export default function Pharmacy() {
             </span>
           </div>
 
-          <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+          <table className="table" style={{ width: '100%', minWidth: '600px', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                <th style={{ padding: '0.85rem 0.75rem', width: '48px', textAlign: 'center' }}>#</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Customer / Buyer</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Medication Sold</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Amount Collected</th>
@@ -734,13 +743,16 @@ export default function Pharmacy() {
             <tbody>
               {directSalesHistory.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                     No direct walk-in sales recorded yet. Click "Direct OTC / Pass-by Drug Sale" above to sell.
                   </td>
                 </tr>
               ) : (
-                directSalesHistory.map(sale => (
+                directSalesHistory.map((sale, idx) => (
                   <tr key={sale.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
+                      {idx + 1}
+                    </td>
                     <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>
                       <div>{sale.patient_name || 'Walk-in Customer'}</div>
                       {sale.customer_phone && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{sale.customer_phone}</span>}
@@ -863,7 +875,7 @@ export default function Pharmacy() {
                     )
                   })
                   .slice(0, 30)
-                  .map(d => {
+                  .map((d, idx) => {
                     const isSelected = otcForm.drug_id === d.id
                     const isOutOfStock = d.current_stock <= 0
                     return (
@@ -886,12 +898,17 @@ export default function Pharmacy() {
                           transition: 'background 0.15s ease'
                         }}
                       >
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: isSelected ? 'var(--brand)' : 'var(--text-primary)' }}>
-                            {d.name}
-                          </div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                            {d.category} &middot; {d.unit}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', minWidth: '22px' }}>
+                            #{idx + 1}
+                          </span>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: isSelected ? 'var(--brand)' : 'var(--text-primary)' }}>
+                              {d.name}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              {d.category} &middot; {d.unit}
+                            </div>
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>

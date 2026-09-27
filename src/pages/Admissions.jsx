@@ -371,6 +371,7 @@ export default function Admissions() {
         <table className="table" style={{ width: '100%', minWidth: '600px', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '0.8rem 0.75rem', width: '48px', textAlign: 'center' }}>#</th>
               <th style={{ padding: '0.8rem 1rem' }}>Patient</th>
               <th style={{ padding: '0.8rem 1rem' }}>Ward & Bed</th>
               <th style={{ padding: '0.8rem 1rem' }}>Admitting Diagnosis</th>
@@ -381,13 +382,16 @@ export default function Admissions() {
           <tbody>
             {activeAdmissions.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   No patients currently admitted in this clinic branch.
                 </td>
               </tr>
             ) : (
-              activeAdmissions.map(adm => (
+              activeAdmissions.map((adm, idx) => (
                 <tr key={adm.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '0.8rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    {idx + 1}
+                  </td>
                   <td style={{ padding: '0.8rem 1rem', fontWeight: 600 }}>{adm.patient_name}</td>
                   <td style={{ padding: '0.8rem 1rem' }}>
                     <div>{adm.ward}</div>
